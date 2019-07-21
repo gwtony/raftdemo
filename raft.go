@@ -35,6 +35,7 @@ import (
 	"go.etcd.io/etcd/wal/walpb"
 
 	"go.uber.org/zap"
+	//"go.etcd.io/etcd/vendor/go.uber.org/zap"
 )
 
 // A key-value stream backed by raft

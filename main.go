@@ -38,7 +38,7 @@ func main() {
 	getSnapshot := func() ([]byte, error) { return kvs.getSnapshot() }
 	commitC, errorC, snapshotterReady := newRaftNode(*id, strings.Split(*cluster, ","), *join, getSnapshot, proposeC, confChangeC)
 
-	kvs.Init(<-snapshotterReady, proposeC, commitC, errorC)
+	kvs.Init(<-snapshotterReady, proposeC, commitC, errorC, *id)
 
 	// the key-value http handler will propose updates to raft
 	serveHttpKVAPI(kvs, *kvport, confChangeC, errorC)

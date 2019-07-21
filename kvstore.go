@@ -19,7 +19,8 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"log"
-	"sync"
+	//"sync"
+	//"strconv"
 
 	"go.etcd.io/etcd/etcdserver/api/snap"
 )
@@ -27,8 +28,9 @@ import (
 // a key-value store backed by raft
 type kvstore struct {
 	proposeC    chan<- string // channel for proposing updates
-	mu          sync.RWMutex
-	kvStore     map[string]string // current committed key-value pairs
+	//mu          sync.RWMutex
+	//kvStore     map[string]string // current committed key-value pairs
+	kvStore Rock
 	snapshotter *snap.Snapshotter
 }
 
@@ -37,9 +39,13 @@ type kv struct {
 	Val string
 }
 
-func (s *kvstore) Init(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <-chan *string, errorC <-chan error) *kvstore {
+func (s *kvstore) Init(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <-chan *string, errorC <-chan error, id int) *kvstore {
 	s.proposeC = proposeC
-	s.kvStore = make(map[string]string)
+	//s.kvStore = make(map[string]string)
+	
+	rock := &Rock{}
+	s.kvStore, _ =  rock.Init(id)
+
 	s.snapshotter = snapshotter
 	// replay log into key-value map
 	s.readReplays(commitC, errorC)
@@ -49,10 +55,13 @@ func (s *kvstore) Init(snapshotter *snap.Snapshotter, proposeC chan<- string, co
 }
 
 func (s *kvstore) Lookup(key string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	v, ok := s.kvStore[key]
-	return v, ok
+	//s.mu.RLock()
+	//defer s.mu.RUnlock()
+	v, err := s.kvStore.Get([]byte(key))
+	if err != nil {
+		return "", false
+	}
+	return string(v), true
 }
 
 func (s *kvstore) Propose(k string, v string) {
@@ -77,9 +86,11 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 		if err := dec.Decode(&dataKv); err != nil {
 			log.Fatalf("raftexample: could not decode message (%v)", err)
 		}
-		s.mu.Lock()
-		s.kvStore[dataKv.Key] = dataKv.Val
-		s.mu.Unlock()
+		
+		s.kvStore.Put([]byte(dataKv.Key), []byte(dataKv.Val))
+		//s.mu.Lock()
+		//s.kvStore[dataKv.Key] = dataKv.Val
+		//s.mu.Unlock()
 	}
 
 	log.Printf("end read commits")
@@ -89,9 +100,12 @@ func (s *kvstore) readCommits(commitC <-chan *string, errorC <-chan error) {
 }
 
 func (s *kvstore) getSnapshot() ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return json.Marshal(s.kvStore)
+	//s.mu.RLock()
+	//defer s.mu.RUnlock()
+	//return json.Marshal(s.kvStore)
+
+	//TODO: return mock
+	return nil, nil
 }
 
 func (s *kvstore) recoverFromSnapshot(snapshot []byte) error {
@@ -99,9 +113,12 @@ func (s *kvstore) recoverFromSnapshot(snapshot []byte) error {
 	if err := json.Unmarshal(snapshot, &store); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.kvStore = store
+	for k, v := range store {
+		_ = s.kvStore.Put([]byte(k), []byte(v))
+	}
+	//s.mu.Lock()
+	//defer s.mu.Unlock()
+	//s.kvStore = store
 	return nil
 }
 
