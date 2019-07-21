@@ -106,7 +106,6 @@ func (s *kvstore) recoverFromSnapshot(snapshot []byte) error {
 }
 
 func (s *kvstore) readReplays(commitC <-chan *string, errorC <-chan error) {
-	//SHOULD NOT call snapshotter.Load twice !
 	snapshot, err := s.snapshotter.Load()
 	if err == snap.ErrNoSnapshot {
 		return
